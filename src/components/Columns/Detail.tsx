@@ -19,15 +19,27 @@ import {
   propEq,
   pathOr,
   apply,
-  flip,
+  pluck,
   append,
   objOf,
   curry,
-  __
+  __,
+  uniq,
+  is,
+  identity,
+  mergeRight,
+  head,
+  flip,
+  allPass,
+  gt,
+  not,
+  any,
+  addIndex,
 } from 'ramda';
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
 import FeedbackIcon from '@mui/icons-material/Feedback';
+import OfflineBoltRoundedIcon from '@mui/icons-material/OfflineBoltRounded';
 import {
   ColumnDetail,
   ColumnSampleEntry,
@@ -40,13 +52,16 @@ import {
   isBlank,
   toPercentage
 } from '../../utils/common';
-import ColumnSampleTable from './ColumnSampleTable';
+import ColumnSampleTable, { Mode } from './ColumnSampleTable';
 import FloatingMenu from '../../components/FloatingMenu';
 import Loadable from '../Loadable';
+import FullCapacityForm from './FullCapacityForm';
 import { snakeCase } from 'change-case';
 import useSagaDispatch from '../../hooks/useSagaDispatch';
 import { ColumnsState } from '../../store/reducers/columns';
-import { tapLog } from '../../utils/log';
+import { log, tapLog } from '../../utils/log';
+import styled from 'styled-components';
+import classNames from 'classnames';
 
 interface DetailProps {
   record: ColumnDetail;
@@ -54,6 +69,12 @@ interface DetailProps {
   column: string;
   tables: Tables;
 }
+
+const IconContainer = styled.div`
+  svg {
+    font-size: 50px;
+  }
+`;
 
 export default ({ loading, table, column, tables, close }) => {
   const { dispatch, state } = useSagaDispatch<ColumnsState>('columns');
@@ -68,17 +89,28 @@ export default ({ loading, table, column, tables, close }) => {
   const [selectedSampleBatch, setSelectedSampleBatch] = useState<
     SampleBatch | undefined
   >(undefined);
+  const [showFullCapacityForm, setShowFullCapacityForm] = useState<boolean>(false);
+  
+  log('sampleBatches', sampleBatches)
 
   const clearSelectedColumnDetail = () => {
     dispatch('setSelected', { key: 'columnDetail', value: undefined });
   };
 
+  // return a function to invoke saga action
+  // if the parameter is String, then make it a object with key 'uid', otherwise use the parameter as the input
   const invokeAction = (action: string) =>
     compose(
       apply(dispatch),
       curry(append)(__, [action]),
-      objOf<string>('uid'),
-      prop<string>('uid')
+      ifElse(
+        is(String),
+        compose(
+          objOf<string>('uid'),
+          prop<string>('uid')
+        ),
+        identity
+      )
     );
 
   useEffect(() => {
@@ -90,11 +122,38 @@ export default ({ loading, table, column, tables, close }) => {
     return <div />;
   }
 
+  const requestFullCapacity = compose(
+    invokeAction('requestFullCapacity'),
+    mergeRight({ uid, }),
+  );
+  const getUsedModels = compose(uniq, pluck('model'));
+  const startFullCapacity = (e: MouseEvent) => {
+    e.preventDefault();
+
+    setShowFullCapacityForm(true);
+  };
+  const isOver90 = (attr: string) => compose(
+    allPass([
+      compose(not, isNil),
+      flip(gt)(0.9),
+    ]),
+    tapLog('val'),
+    path(['statistics', attr])
+  )
+  const isFullCapacityAvailable = any(
+    allPass([
+      isOver90('precision'),
+      isOver90('recall'),
+    ])
+  );
+  const fullCapacityAvailable = isFullCapacityAvailable(sampleBatches);
+
   const renderTable = () => (
     <ColumnSampleTable
+      mode={Mode.Normal}
       sampleBatches={sampleBatches}
       showSampleBatch={setSelectedSampleBatch}
-      runSampleBatch={invokeAction('run')}
+      dispatchAction={invokeAction}
     />
   );
 
@@ -108,10 +167,10 @@ export default ({ loading, table, column, tables, close }) => {
   const renderAnswerSection = (answer: string, question: string) => (
     <div key={question} className="mt-4">
       <p className="font-semibold text-gray-500 dark:text-gray-400">
-        {compose(path([questionCategory, snakeCase(question)]))(questions)}:
+        {compose(path([questionCategory, snakeCase(question)]))(questions) as string}:
       </p>
       <p className="text-gray-500 dark:text-gray-400">
-        {when(isBlank, always('<无内容>'))(answer)}
+        {when(isBlank, always('<无内容>'))(answer) as string}
       </p>
     </div>
   );
@@ -121,12 +180,16 @@ export default ({ loading, table, column, tables, close }) => {
       key={`${entry.uid}-incorrect`}
       className="p-5 duration-300 transform bg-white border rounded shadow-sm hover:-translate-y-2"
     >
-      <div className="float-right">
-        <Tooltip content={entry.answer}>
-          <FeedbackIcon fontSize="small" />
-        </Tooltip>
-      </div>
-      <h6 className="mb-2 text-left font-semibold leading-5">{entry.pkId}</h6>
+      <h6 className="flex justify-between mb-2 text-left font-semibold leading-5">
+        <span className="flex-1">
+          {entry.pkId}
+        </span>
+        <span className="float-right">
+          <Tooltip content={entry.answer}>
+            <FeedbackIcon fontSize="small" />
+          </Tooltip>
+        </span>
+      </h6>
       <div className="text-left text-sm text-gray-900">
         {compose(
           values,
@@ -215,14 +278,28 @@ export default ({ loading, table, column, tables, close }) => {
   return (
     <>
       <Card className="text-left">
-        <h5 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-          {path(['data', 'prompt'], record)}
-        </h5>
+        <div className="flex">
+          <h5 className="flex-1 text-xl font-bold tracking-tight whitespace-break-spaces text-gray-900 dark:text-white">
+            {path(['data', 'prompt'], record)}
+          </h5>
+          <Tooltip placement="right" content="全量">
+            <IconContainer>
+              <a href="#" className={classNames('font-medium', {
+                  'text-gray-200 disabled': !fullCapacityAvailable,
+                  'hover:text-blue-600 dark:hover:text-blue-500': fullCapacityAvailable
+                })} onClick={when(always(fullCapacityAvailable), startFullCapacity)}>
+                <OfflineBoltRoundedIcon fontSize="inherit" />
+              </a>
+            </IconContainer>
+          </Tooltip>
+        </div>
+        <div className="relative">
+        </div>
         <div className="font-normal text-gray-700 dark:text-gray-400">
           <ul>
             {compose(
-              map((question: string) => (
-                <li key={`${record.uid}-question`}>
+              addIndex(map)((question: string, index: number) => (
+                <li key={`${record.uid}-question-${index}`}>
                   {path(
                     [getQuestionCategoryFromTableName(table), question],
                     questions
@@ -238,6 +315,16 @@ export default ({ loading, table, column, tables, close }) => {
       <div className="mt-10">
         {ifElse(isNil, renderTable, renderSampleBatch)(selectedSampleBatch)}
       </div>
+
+      {
+        showFullCapacityForm &&
+          <FullCapacityForm
+            loading={loading}
+            models={getUsedModels(sampleBatches)}
+            submit={requestFullCapacity}
+            close={() => setShowFullCapacityForm(false)}
+          />
+      }
 
       <FloatingMenu
         handleClick={

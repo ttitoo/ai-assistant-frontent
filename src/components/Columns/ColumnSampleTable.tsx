@@ -17,17 +17,27 @@ import {
   anyPass,
   curry,
   __,
-  when
+  when,
+  unless
 } from 'ramda';
 import dayjs from 'dayjs';
 import { SampleBatch } from '../../interfaces';
 import { isBlank, toPercentage } from '../../utils/common';
 import CompareIcon from '@mui/icons-material/Compare';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import OfflineBoltRoundedIcon from '@mui/icons-material/OfflineBoltRounded';
+import DoneRoundedIcon from '@mui/icons-material/DoneRounded';
+import SyncIcon from '@mui/icons-material/Sync';
+import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore';
 import styled from 'styled-components';
 import translations from '../../utils/translations';
 import { tapLog } from '../../utils/log';
 import classNames from 'classnames';
+
+export enum Mode {
+  Admin = 1,
+  Normal = 2
+}
 
 const StatisticsContainer = styled.ul`
   list-style: none;
@@ -55,7 +65,13 @@ const getDisplayablePercentage: (
     always<string>('\\')
   )(record);
 
-export default ({ sampleBatches, showSampleBatch, runSampleBatch }) => {
+export default ({
+  mode,
+  sampleBatches,
+  showSampleBatch,
+  dispatchAction,
+  requestFullCapacity
+}) => {
   // const StatisticsDetail = (record: SampleBatch) => {
   //   const statistics = prop('statistics')(record);
   //   const finished =
@@ -86,8 +102,132 @@ export default ({ sampleBatches, showSampleBatch, runSampleBatch }) => {
   //   juxt([prop('precision'), prop('recall')]),
   //   prop('statistics')
   // );
+  const dispatch = curry(dispatchAction);
   const statesTranslations = path(['sample_batch', 'states'], translations);
-  const isPending = compose(equals('pending'), prop('state'));
+  const isState = (state: string) => compose(equals(state), prop('state'));
+  const isPending = isState('pending');
+  const isFinished = isState('complete');
+  const isRunning = isState('running');
+  const isToBeConfirmed = isState('to_be_confirmed');
+  const isAdmin = equals(mode, Mode.Admin);
+  const adminActions = (record: SampleBatch) => (
+    <>
+      <Tooltip placement="top" content="Confirm">
+        <a
+          href="#"
+          className={classNames('font-medium', {
+            'text-gray-200 disabled': !isToBeConfirmed(record),
+            'hover:text-blue-600 dark:hover:text-blue-500':
+              isToBeConfirmed(record)
+          })}
+          onClick={(e: MouseEvent<HTMLAnchorElement>) => {
+            e.preventDefault();
+            when(isToBeConfirmed, dispatch('confirm'))(record);
+          }}
+        >
+          <DoneRoundedIcon fontSize="medium" />
+        </a>
+      </Tooltip>
+      <Tooltip placement="top" content="Authorize">
+        <a
+          href="#"
+          className={classNames('font-medium', {
+            'text-gray-200 disabled': !isPending(record),
+            'hover:text-blue-600 dark:hover:text-blue-500': isPending(record)
+          })}
+          onClick={(e: MouseEvent<HTMLAnchorElement>) => {
+            e.preventDefault();
+            when(isPending, dispatch('run'))(record);
+          }}
+        >
+          <PlayArrowIcon fontSize="medium" />
+        </a>
+      </Tooltip>
+      <Tooltip placement="top" content="Apply">
+        <a
+          href="#"
+          className={classNames('font-medium', {
+            'text-gray-200 disabled': !isFinished(record),
+            'hover:text-blue-600 dark:hover:text-blue-500': isFinished(record)
+          })}
+          onClick={(e: MouseEvent<HTMLAnchorElement>) => {
+            e.preventDefault();
+            when(isFinished, dispatch('apply'))(record);
+          }}
+        >
+          <SyncIcon fontSize="medium" />
+        </a>
+      </Tooltip>
+    </>
+  );
+  const userActions = (record: SampleBatch) => (
+    <>
+      {false && (
+        <Tooltip placement="top" content="Run">
+          <a
+            href="#"
+            className={classNames('font-medium', {
+              'text-gray-200 disabled': !isPending(record),
+              'hover:text-blue-600 dark:hover:text-blue-500': isPending(record)
+            })}
+            onClick={(e: MouseEvent<HTMLAnchorElement>) => {
+              e.preventDefault();
+              when(isPending, dispatch('run'))(record);
+            }}
+          >
+            <PlayArrowIcon fontSize="medium" />
+          </a>
+        </Tooltip>
+      )}
+      <Tooltip placement="top" content="Diff">
+        <a
+          href="#"
+          className={classNames('font-medium', {
+            'text-gray-200 disabled': !isFinished(record),
+            'hover:text-blue-600 dark:hover:text-blue-500': isFinished(record)
+          })}
+          onClick={(e: MouseEvent<HTMLAnchorElement>) => {
+            e.preventDefault();
+            when(isFinished, showSampleBatch)(record);
+          }}
+        >
+          <CompareIcon fontSize="medium" />
+        </a>
+      </Tooltip>
+      <Tooltip placement="top" content="Force refresh state">
+        <a
+          href="#"
+          className={classNames('font-medium ml-2', {
+            'text-gray-200 disabled': !isRunning(record),
+            'hover:text-blue-600 dark:hover:text-blue-500': isRunning(record)
+          })}
+          onClick={(e: MouseEvent<HTMLAnchorElement>) => {
+            e.preventDefault();
+            when(isRunning, dispatch('refreshSampleBatch'))(record);
+          }}
+        >
+          <SettingsBackupRestoreIcon fontSize="medium" />
+        </a>
+      </Tooltip>
+      {false && (
+        <Tooltip placement="top" content="全量">
+          <a
+            href="#"
+            className={classNames('font-medium ml-2', {
+              'text-gray-200 disabled': !isFinished(record),
+              'hover:text-blue-600 dark:hover:text-blue-500': isFinished(record)
+            })}
+            onClick={(e: MouseEvent<HTMLAnchorElement>) => {
+              e.preventDefault();
+              when(isFinished, dispatch('requestFullCapacity'))(record);
+            }}
+          >
+            <OfflineBoltRoundedIcon fontSize="medium" />
+          </a>
+        </Tooltip>
+      )}
+    </>
+  );
   const toLine = (record: SampleBatch) => (
     <Table.Row
       key={record.uid}
@@ -97,8 +237,29 @@ export default ({ sampleBatches, showSampleBatch, runSampleBatch }) => {
         {record.uid}
       </Table.Cell>
       <Table.Cell>{record.model}</Table.Cell>
-      <Table.Cell>{getDisplayablePercentage(record, 'precision')}</Table.Cell>
-      <Table.Cell>{getDisplayablePercentage(record, 'recall')}</Table.Cell>
+      {ifElse(
+        always(isAdmin),
+        () => (
+          <>
+            <Table.Cell>
+              {getDisplayablePercentage(record, 'precision')}
+            </Table.Cell>
+            <Table.Cell>
+              {getDisplayablePercentage(record, 'recall')}
+            </Table.Cell>
+          </>
+        ),
+        () => (
+          <>
+            <Table.Cell>
+              {getDisplayablePercentage(record, 'precision')}
+            </Table.Cell>
+            <Table.Cell>
+              {getDisplayablePercentage(record, 'recall')}
+            </Table.Cell>
+          </>
+        )
+      )()}
       <Table.Cell>{record.cost}</Table.Cell>
       <Table.Cell>
         {compose(
@@ -111,36 +272,7 @@ export default ({ sampleBatches, showSampleBatch, runSampleBatch }) => {
       </Table.Cell>
       <Table.Cell>
         <div className="flex">
-          <Tooltip placement="top" content="Run">
-            <a
-              href="#"
-              className={classNames('font-medium', {
-                'text-gray-200 disabled': !isPending(record),
-                'hover:text-blue-600 dark:hover:text-blue-500':
-                  isPending(record)
-              })}
-              onClick={(e: MouseEvent<HTMLAnchorElement>) => {
-                e.preventDefault();
-                when(isPending, runSampleBatch)(record);
-              }}
-            >
-              <PlayArrowIcon fontSize="medium" />
-            </a>
-          </Tooltip>
-          {isPending(record) || (
-            <Tooltip placement="top" content="Diff">
-              <a
-                href="#"
-                className="font-medium ml-2 hover:text-blue-600 dark:hover:text-blue-500"
-                onClick={(e: MouseEvent<HTMLAnchorElement>) => {
-                  e.preventDefault();
-                  showSampleBatch(record);
-                }}
-              >
-                <CompareIcon fontSize="medium" />
-              </a>
-            </Tooltip>
-          )}
+          {ifElse(always(isAdmin), adminActions, userActions)(record)}
         </div>
       </Table.Cell>
     </Table.Row>
@@ -150,8 +282,21 @@ export default ({ sampleBatches, showSampleBatch, runSampleBatch }) => {
       <Table.Head>
         <Table.HeadCell>Sample</Table.HeadCell>
         <Table.HeadCell>Model</Table.HeadCell>
-        <Table.HeadCell>Precision</Table.HeadCell>
-        <Table.HeadCell>Recall</Table.HeadCell>
+        {ifElse(
+          always(isAdmin),
+          () => (
+            <>
+              <Table.HeadCell>Precision</Table.HeadCell>
+              <Table.HeadCell>Recall</Table.HeadCell>
+            </>
+          ),
+          () => (
+            <>
+              <Table.HeadCell>Precision</Table.HeadCell>
+              <Table.HeadCell>Recall</Table.HeadCell>
+            </>
+          )
+        )()}
         <Table.HeadCell>Cost</Table.HeadCell>
         <Table.HeadCell>State</Table.HeadCell>
         <Table.HeadCell>Created_at</Table.HeadCell>
@@ -159,7 +304,7 @@ export default ({ sampleBatches, showSampleBatch, runSampleBatch }) => {
           <span className="sr-only">Edit</span>
         </Table.HeadCell>
       </Table.Head>
-      <Table.Body className="divide-y">{map(toLine, data)}</Table.Body>
+      <Table.Body className="divide-y">{map(compose(toLine, tapLog('record')), data)}</Table.Body>
     </Table>
   );
 

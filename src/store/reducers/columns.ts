@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit'
 import type { PayloadAction } from '@reduxjs/toolkit'
-import { prepend } from 'ramda';
+import { always, prepend, map, when, propEq } from 'ramda';
 import { toggle, cacheSuccess } from './common';
 import { ColumnDetail, ColumnSample, ColumnSampleEntry, SampleBatch } from '../../interfaces';
 
@@ -88,6 +88,10 @@ export default createSlice({
       state.selected.columnDetail = action.payload.uid;
       state.sampleBatches = payloads;
       state.cache.sampleBatches[uid] = payloads;
+    },
+    showSampleBatchSuccess: (state, action) => {
+      const { payload, } = action.payload;
+      state.sampleBatches = map(when(propEq('uid', payload.uid), always(payload)), state.sampleBatches);
     },
     setSelectedSampleBatch: (state) => {
       state.selected.sampleBatch = action.payload.sampleBatch;

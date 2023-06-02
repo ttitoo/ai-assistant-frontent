@@ -1,4 +1,15 @@
 # SPA for ai-assistant(https://ai-assistant.miracleplus.com/)
+Single-Page application for ai-assistant, which is a platform to manage prompt statistics(precision, recall, and etc.), the goal is to improve prompt, and use OPENAI to predict the features of applications/founders, like PhD, Prof.
+
+## Screenshots
+![](doc/img/1.png)
+
+![](doc/img/2.png)
+
+![](doc/img/3.png)
+
+![](doc/img/4.png)
+
 
 ## Install
 ### Dependencies

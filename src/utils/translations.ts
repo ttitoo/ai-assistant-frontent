@@ -3,6 +3,7 @@ export default {
   sample_batch: {
     states: {
       unkown: '未知',
+      to_be_confirmed: '待确认',
       calculating: '核算中',
       pending: '待批准',
       running: '运行中',

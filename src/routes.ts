@@ -1,7 +1,8 @@
 // src/routes.ts
 
 // pages
-import Home from "./pages/Home";
+// import Home from "./pages/Home";
+import Admin from "./pages/Admin";
 import Columns from "./pages/Columns";
 import Samples from "./pages/Samples";
 import SampleEntries from "./pages/SampleEntries"
@@ -15,6 +16,13 @@ export const routes: Array<IRoute> = [
       path: '/',
       enabled: true,
       component: Columns
+  },
+  {
+      key: 'admin',
+      title: 'Admin',
+      path: '/admin',
+      enabled: true,
+      component: Admin
   },
   {
       key: 'columns',

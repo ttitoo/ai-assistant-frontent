@@ -40,12 +40,24 @@ import {
   mapObjIndexed,
   values,
   always,
-  join
+  join,
+  find
 } from 'ramda';
 import { ColumnDetail } from '../../interfaces';
-import { tapLog } from '../../utils/log';
+import { log, tapLog } from '../../utils/log';
 import questions from '../../utils/questions';
 import { getQuestionCategoryFromTableName } from '../../utils/common';
+
+const defaultValueOptions = [
+  {
+    label: '是',
+    value: '1'
+  },
+  {
+    label: '否',
+    value: '0'
+  }
+];
 
 const Form = ({ loading, table, column, record, create, close }) => {
   const [cfg, setCfg] = useState<{ res: ColumnDetail | undefined }>({
@@ -58,6 +70,7 @@ const Form = ({ loading, table, column, record, create, close }) => {
   }, [prop('uid', record)]);
   const updateAttr = compose(
     setRes,
+    tapLog('res'),
     apply(set),
     juxt([
       compose(lensPath, prepend('data'), of, nthArg(1)),
@@ -168,6 +181,28 @@ const Form = ({ loading, table, column, record, create, close }) => {
                 nthArg(0)
               )}
               options={options}
+            />
+          </div>
+          <div>
+            <div className="mb-2 block">
+              <Label
+                htmlFor="answers"
+                value="Default value for empty content"
+              />
+            </div>
+            <Select
+              value={find(
+                compose(
+                  flip(includes)(pathOr([], ['res', 'data', 'default'], cfg)),
+                  prop('value')
+                )
+              )(defaultValueOptions)}
+              onChange={compose(
+                updateResAttr('default'),
+                prop('value'),
+                nthArg(0)
+              )}
+              options={defaultValueOptions}
             />
           </div>
           <div className="hidden">

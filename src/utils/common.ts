@@ -20,7 +20,10 @@ import {
   join,
   filter,
   includes,
-  unless
+  toString,
+  identity,
+  map,
+  has
 } from 'ramda';
 import { tapLog } from './log';
 import questions from './questions';
@@ -28,7 +31,7 @@ import { Option } from '../interfaces';
 
 const isBlank = anyPass([isNil, isEmpty]);
 
-const getQuestionCategoryFromTableName = compose(head, split('_'));
+const getQuestionCategoryFromTableName = compose(head<string>, split('_'));
 
 const toQuestionOptions = ifElse(
   isNil,
@@ -55,9 +58,25 @@ const toPercentage = compose(
   multiply(100)
 );
 
+const arrayToOptions = (candidates: any[], labels: object = {}) =>
+  compose(
+    values,
+    map(
+      applySpec({
+        label: ifElse(
+          compose(flip(has)(labels), toString),
+          compose(flip(prop)(labels), toString),
+          identity
+        ),
+        value: identity
+      })
+    )
+  )(candidates);
+
 export {
   isBlank,
   getQuestionCategoryFromTableName,
   toQuestionOptions,
-  toPercentage
+  toPercentage,
+  arrayToOptions
 };

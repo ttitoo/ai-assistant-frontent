@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Dispatch, SetStateAction } from 'react';
 import { Modal, Button, Label } from 'flowbite-react';
 import Select from 'react-select';
-import { ColumnSample, Meta, Option } from '../../interfaces';
+import { ColumnSample, Meta, Option, SampleBatch } from '../../interfaces';
 import {
   compose,
   set,
@@ -26,6 +26,7 @@ import {
 } from 'ramda';
 import useSagaDispatch from '../../hooks/useSagaDispatch';
 import { ColumnsState } from '../../store/reducers/columns';
+import { arrayToOptions } from '../../utils/common';
 
 interface FormProps {
   meta: Meta;
@@ -39,15 +40,25 @@ interface Options {
   [key: string]: Option[];
 }
 
-const SampleForm = ({ loading, meta, columnDetailUid, table, column, close }) => {
+const SampleForm = ({
+  loading,
+  meta,
+  columnDetailUid,
+  table,
+  column,
+  close
+}) => {
   const { dispatch, state } = useSagaDispatch<ColumnsState>('columns');
   const { columnSamples: samples } = state;
   const [selectedSample, setSelectedSample] = useState<
     ColumnSample | undefined
   >(undefined);
   const [model, setModel] = useState<string>();
+  const [splitPerTokens, setSplitPerTokens] = useState<number>(-1);
   const [options, setOptions] = useState<Options>({});
-  const updateOptions = curry((key: string, val: Option[]) => setOptions(set(lensProp(key), val, options)));
+  const updateOptions = curry((key: string, val: Option[]) =>
+    setOptions(set(lensProp(key), val, options))
+  );
   useEffect(() => {
     compose(
       updateOptions('samples'),
@@ -56,7 +67,7 @@ const SampleForm = ({ loading, meta, columnDetailUid, table, column, close }) =>
           label: (e) => `${prop('uid', e)} (${prop('count', e)})`,
           value: prop('uid')
         })
-      ),
+      )
     )(samples);
   }, [compose(join('-'), pluck('uid'))(samples)]);
   useEffect(() => {
@@ -74,30 +85,37 @@ const SampleForm = ({ loading, meta, columnDetailUid, table, column, close }) =>
   }, [compose(length, propOr([], 'gpt'))(meta)]);
   useEffect(() => {
     if (!isNil(table) && !isNil(column)) {
-      // dispatch({
-      //   type: 'columns/listColumnSamples',
-      //   payload: { table, column, toggleLoading: false, }
-      // });
-      dispatch('listColumnSamples', { table, column, toggleLoading: false, })
+      dispatch('listColumnSamples', { table, column, toggleLoading: false });
     }
   }, [table, column]);
 
-  const updateSelectedSample = compose(
+  const updateSelectedSample = compose<
+    [MouseEvent],
+    string,
+    boolean,
+    ColumnSample,
+    Dispatch<SetStateAction<ColumnSample>>
+  >(
     setSelectedSample,
     flip(find)(samples),
     propEq('uid'),
-    prop('value')
+    prop<string>('value')
   );
 
-  const run = async (e: MouseEvent) => {
-    // dispatch({
-    //   type: 'columns/runSample',
-    //   payload: { columnDetailUid, columnSampleUid: selectedSample.uid, model }
-    // });
-    dispatch('runSample', { columnDetailUid, columnSampleUid: selectedSample.uid, model });
+  const run = () => {
+    dispatch('runSample', {
+      columnDetailUid,
+      columnSampleUid: selectedSample.uid,
+      model,
+      splitPerTokens
+    });
   };
   return (
-    <Modal show={!isNil(columnDetailUid)} popup={true} onClose={loading ? undefined : close}>
+    <Modal
+      show={!isNil(columnDetailUid)}
+      popup={true}
+      onClose={loading ? undefined : close}
+    >
       <Modal.Header>Run Sample</Modal.Header>
       <Modal.Body>
         <form className="flex flex-col gap-4">
@@ -112,11 +130,22 @@ const SampleForm = ({ loading, meta, columnDetailUid, table, column, close }) =>
           </div>
           <div>
             <div className="mb-2 block">
-              <Label htmlFor="model" value="model" />
+              <Label htmlFor="model" value="Model" />
             </div>
             <Select
               onChange={compose(setModel, prop('value'))}
               options={propOr([], 'models', options)}
+            />
+          </div>
+          <div>
+            <div className="mb-2 block">
+              <Label htmlFor="model" value="Token" />
+            </div>
+            <Select
+              onChange={compose(setSplitPerTokens, prop('value'))}
+              options={arrayToOptions([-1, 50, 100, 250, 500, 1000, 2000], {
+                '-1': 'One By One'
+              })}
             />
           </div>
         </form>
