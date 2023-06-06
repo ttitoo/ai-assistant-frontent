@@ -55,6 +55,7 @@ const SampleForm = ({
   >(undefined);
   const [model, setModel] = useState<string>();
   const [splitPerTokens, setSplitPerTokens] = useState<number>(-1);
+  const [maxSizePerDiv, setMaxSizePerDiv] = useState<number>(20);
   const [options, setOptions] = useState<Options>({});
   const updateOptions = curry((key: string, val: Option[]) =>
     setOptions(set(lensProp(key), val, options))
@@ -107,7 +108,8 @@ const SampleForm = ({
       columnDetailUid,
       columnSampleUid: selectedSample.uid,
       model,
-      splitPerTokens
+      splitPerTokens,
+      maxSizePerDiv
     });
   };
   return (
@@ -139,13 +141,22 @@ const SampleForm = ({
           </div>
           <div>
             <div className="mb-2 block">
-              <Label htmlFor="model" value="Token" />
+              <Label htmlFor="token" value="Token" />
             </div>
             <Select
               onChange={compose(setSplitPerTokens, prop('value'))}
               options={arrayToOptions([-1, 50, 100, 250, 500, 1000, 2000], {
                 '-1': 'One By One'
               })}
+            />
+          </div>
+          <div>
+            <div className="mb-2 block">
+              <Label htmlFor="max_size" value="Max size" />
+            </div>
+            <Select
+              onChange={compose(setMaxSizePerDiv, prop('value'))}
+              options={arrayToOptions([5, 15, 10, 20, 25, 30, 35, 40, 45, 50])}
             />
           </div>
         </form>

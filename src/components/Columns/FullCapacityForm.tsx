@@ -42,11 +42,20 @@ const FullCapacityForm = ({ models, loading, submit, close, }) => {
           </div>
           <div>
             <div className="mb-2 block">
-              <Label htmlFor="model" value="Split Per Tokens" />
+              <Label htmlFor="token" value="Split Per Tokens" />
             </div>
             <Select
               onChange={update('splitPerTokens')}
               options={arrayToOptions([-1, 50, 100, 250, 500, 1000, 2000], { '-1': 'One By One' })}
+            />
+          </div>
+          <div>
+            <div className="mb-2 block">
+              <Label htmlFor="max_size" value="Max size" />
+            </div>
+            <Select
+              onChange={update('maxSizePerDiv')}
+              options={arrayToOptions([5, 15, 10, 20, 25, 30, 35, 40, 45, 50])}
             />
           </div>
         </form>

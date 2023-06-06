@@ -31,9 +31,9 @@ function* create(action) {
 
 function* runSample(action) {
   yield put({ type: 'columns/toggle', payload: { key: 'success', value: false } });
+  const { columnDetailUid, columnSampleUid, model, splitPerTokens, maxSizePerDiv } = action.payload;
   yield put({ type: 'columns/toggle', payload: { key: 'submitting', value: true } });
-  const { columnDetailUid, columnSampleUid, model, splitPerTokens } = action.payload;
-  const res = yield call(api.runSample, columnDetailUid, columnSampleUid, model, splitPerTokens);
+  const res = yield call(api.runSample, columnDetailUid, columnSampleUid, model, splitPerTokens, maxSizePerDiv);
   try {
     raiseErrorOnCondition(res)
     yield put({ type: 'columns/toggle', payload: { key: 'success', value: true } });
@@ -92,8 +92,8 @@ function* refreshSampleBatch(action) {
 
 function* requestFullCapacity(action) {
   yield put({ type: 'columns/toggle', payload: { key: 'submitting', value: true } });
-  const { uid, model, splitPerTokens, } = action.payload;
-  raiseErrorOnCondition(yield call(api.requestFullCapacity, uid, model, splitPerTokens));
+  const { uid, model, splitPerTokens, maxSizePerDiv, } = action.payload;
+  raiseErrorOnCondition(yield call(api.requestFullCapacity, uid, model, splitPerTokens, maxSizePerDiv));
   yield put({ type: 'columns/requestFullCapacitySuccess' });
   yield put({ type: 'columns/toggle', payload: { key: 'submitting', value: false } });
 }
