@@ -28,6 +28,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import OfflineBoltRoundedIcon from '@mui/icons-material/OfflineBoltRounded';
 import DoneRoundedIcon from '@mui/icons-material/DoneRounded';
 import SyncIcon from '@mui/icons-material/Sync';
+import GavelIcon from '@mui/icons-material/Gavel';
 import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore';
 import styled from 'styled-components';
 import translations from '../../utils/translations';
@@ -143,6 +144,21 @@ export default ({
           <PlayArrowIcon fontSize="medium" />
         </a>
       </Tooltip>
+      <Tooltip placement="top" content="Check">
+        <a
+          href="#"
+          className={classNames('font-medium', {
+            'text-gray-200 disabled': !isRunning(record),
+            'hover:text-blue-600 dark:hover:text-blue-500': isRunning(record)
+          })}
+          onClick={(e: MouseEvent<HTMLAnchorElement>) => {
+            e.preventDefault();
+            when(isRunning, dispatch('check'))(record);
+          }}
+        >
+          <SyncIcon fontSize="medium" />
+        </a>
+      </Tooltip>
       <Tooltip placement="top" content="Apply">
         <a
           href="#"
@@ -155,7 +171,7 @@ export default ({
             when(isFinished, dispatch('apply'))(record);
           }}
         >
-          <SyncIcon fontSize="medium" />
+          <GavelIcon fontSize="medium" />
         </a>
       </Tooltip>
     </>
