@@ -1,5 +1,9 @@
 
 export default {
+  answerFormats: {
+    text: '文字',
+    json: 'JSON'
+  },
   sample_batch: {
     states: {
       unkown: '未知',

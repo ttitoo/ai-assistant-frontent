@@ -41,11 +41,14 @@ import {
   values,
   always,
   join,
-  find
+  find,
+  identity,
+  equals,
+  propOr
 } from 'ramda';
 import { ColumnDetail } from '../../interfaces';
-import { log, tapLog } from '../../utils/log';
 import questions from '../../utils/questions';
+import translations from '../../utils/translations';
 import { getQuestionCategoryFromTableName } from '../../utils/common';
 
 const defaultValueOptions = [
@@ -59,7 +62,15 @@ const defaultValueOptions = [
   }
 ];
 
-const Form = ({ loading, table, column, record, create, close }) => {
+const Form = ({
+  loading,
+  table,
+  column,
+  answerFormats,
+  record,
+  create,
+  close
+}) => {
   const [cfg, setCfg] = useState<{ res: ColumnDetail | undefined }>({
     res: undefined
   });
@@ -70,7 +81,6 @@ const Form = ({ loading, table, column, record, create, close }) => {
   }, [prop('uid', record)]);
   const updateAttr = compose(
     setRes,
-    tapLog('res'),
     apply(set),
     juxt([
       compose(lensPath, prepend('data'), of, nthArg(1)),
@@ -84,8 +94,7 @@ const Form = ({ loading, table, column, record, create, close }) => {
     compose(
       updateResAttr('keywords'),
       flip(append)(keywords),
-      path(['target', 'value']),
-      tapLog('ORIGIN')
+      path(['target', 'value'])
     )(e);
     return e;
   };
@@ -111,11 +120,11 @@ const Form = ({ loading, table, column, record, create, close }) => {
     </Badge>
   );
 
-  const isNewRecord = compose(is(Number), prop('uid'))(record);
+  const isNewRecord = propOr(true, '_new', record);
 
-  const options = ifElse(
-    isNil,
-    always([]),
+  const preventNullOptions = (fn) => ifElse(isNil, always([]), compose(apply(fn), of));
+
+  const options = preventNullOptions(
     compose(
       values,
       mapObjIndexed(
@@ -132,22 +141,25 @@ const Form = ({ loading, table, column, record, create, close }) => {
     )
   )(table);
 
+  const answerFormatOptions = preventNullOptions(
+    compose(
+      map(
+        applySpec({
+          value: identity,
+          label: compose(
+            flip(path)(translations),
+            flip(append)(['answerFormats'])
+          )
+        })
+      )
+    )
+  )(answerFormats);
+
   return (
     <Modal show={!isNil(record)} onClose={loading ? undefined : close}>
       <Modal.Header>Create</Modal.Header>
       <Modal.Body>
         <form className="flex flex-col gap-4">
-          <div className={classNames({ hidden: isNewRecord })}>
-            <div className="mb-2 block">
-              <Label htmlFor="uid" value="UID" />
-            </div>
-            <TextInput
-              type="text"
-              disabled={true}
-              defaultValue={prop('uid', record)}
-              required={true}
-            />
-          </div>
           <div>
             <div className="mb-2 block">
               <Label htmlFor="prompt" value="Prompt" />
@@ -155,7 +167,7 @@ const Form = ({ loading, table, column, record, create, close }) => {
             <Textarea
               placeholder="Prompt"
               required={true}
-              defaultValue={path(['res', 'data', 'prompt'], cfg)}
+              defaultValue={isNewRecord ? '' : path(['res', 'data', 'prompt'], cfg)}
               onBlur={compose(
                 updateResAttr('prompt'),
                 path(['target', 'value'])
@@ -169,7 +181,7 @@ const Form = ({ loading, table, column, record, create, close }) => {
             </div>
             <Select
               isMulti
-              value={filter(
+              value={isNewRecord ? '' : filter(
                 compose(
                   flip(includes)(pathOr([], ['res', 'data', 'answers'], cfg)),
                   prop('value')
@@ -186,14 +198,14 @@ const Form = ({ loading, table, column, record, create, close }) => {
           <div>
             <div className="mb-2 block">
               <Label
-                htmlFor="answers"
+                htmlFor="default"
                 value="Default value for empty content"
               />
             </div>
             <Select
-              value={find(
+              value={isNewRecord ? '' : find(
                 compose(
-                  flip(includes)(pathOr([], ['res', 'data', 'default'], cfg)),
+                  equals(pathOr('0', ['res', 'data', 'default'], cfg)),
                   prop('value')
                 )
               )(defaultValueOptions)}
@@ -203,6 +215,25 @@ const Form = ({ loading, table, column, record, create, close }) => {
                 nthArg(0)
               )}
               options={defaultValueOptions}
+            />
+          </div>
+          <div>
+            <div className="mb-2 block">
+              <Label htmlFor="answer_format" value="Answer format" />
+            </div>
+            <Select
+              value={isNewRecord ? '' : find(
+                compose(
+                  equals(pathOr('text', ['res', 'data', 'format'], cfg)),
+                  prop('value')
+                )
+              )(answerFormatOptions)}
+              onChange={compose(
+                updateResAttr('format'),
+                prop('value'),
+                nthArg(0)
+              )}
+              options={answerFormatOptions}
             />
           </div>
           <div className="hidden">

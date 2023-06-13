@@ -143,7 +143,7 @@ const Columns = () => {
     e.preventDefault();
     compose(
       setEditing,
-      mergeLeft<ColumnDetail>({ uid: new Date().getTime() } as ColumnDetail)
+      mergeLeft<ColumnDetail>({ uid: new Date().getTime(), _new: false } as ColumnDetail)
     )(record);
   };
 
@@ -261,6 +261,7 @@ const Columns = () => {
         loading={submitting}
         table={selectedTable}
         column={selectedColumn}
+        answerFormats={prop('answerFormats', meta)}
         record={editing}
         create={create}
         close={() => setEditing(undefined)}
