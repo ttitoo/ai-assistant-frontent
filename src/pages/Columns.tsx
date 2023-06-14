@@ -225,7 +225,7 @@ const Columns = () => {
                       </p>
                     </div>
                   ) : (
-                    <div className="flow-root shadow-md sm:rounded-lg">
+                    <div className="flow-root overflow-auto shadow-md sm:rounded-lg">
                       <Table
                         key="table"
                         table={selectedTable}
