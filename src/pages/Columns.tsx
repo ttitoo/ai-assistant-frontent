@@ -257,15 +257,17 @@ const Columns = () => {
           </div>
         </div>
       </div>
-      <Form
-        loading={submitting}
-        table={selectedTable}
-        column={selectedColumn}
-        answerFormats={prop('answerFormats', meta)}
-        record={editing}
-        create={create}
-        close={() => setEditing(undefined)}
-      />
+      {isNil(editing) || (
+        <Form
+          loading={submitting}
+          table={selectedTable}
+          column={selectedColumn}
+          answerFormats={prop('answerFormats', meta)}
+          record={editing}
+          create={create}
+          close={() => setEditing(undefined)}
+        />
+      )}
       <SampleForm
         loading={submitting}
         meta={meta}

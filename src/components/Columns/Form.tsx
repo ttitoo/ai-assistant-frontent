@@ -43,7 +43,6 @@ import {
   join,
   find,
   identity,
-  equals,
   propOr
 } from 'ramda';
 import { ColumnDetail } from '../../interfaces';
@@ -154,7 +153,7 @@ const Form = ({
   , answerFormats);
 
   return (
-    <Modal show={!isNil(record)} onClose={loading ? undefined : close}>
+    <Modal show={true} onClose={loading ? undefined : close}>
       <Modal.Header>Create</Modal.Header>
       <Modal.Body>
         <form className="flex flex-col gap-4">
@@ -179,7 +178,7 @@ const Form = ({
             </div>
             <Select
               isMulti
-              value={isNewRecord ? '' : filter(
+              value={filter(
                 compose(
                   flip(includes)(pathOr([], ['res', 'data', 'answers'], cfg)),
                   prop('value')
@@ -201,9 +200,9 @@ const Form = ({
               />
             </div>
             <Select
-              value={isNewRecord ? '' : find(
+              value={find(
                 compose(
-                  equals(pathOr('0', ['res', 'data', 'default'], cfg)),
+                  flip(includes)(pathOr([], ['res', 'data', 'default'], cfg)),
                   prop('value')
                 )
               )(defaultValueOptions)}
@@ -220,9 +219,9 @@ const Form = ({
               <Label htmlFor="answer_format" value="Answer format" />
             </div>
             <Select
-              value={isNewRecord ? '' : find(
+              value={find(
                 compose(
-                  equals(pathOr('text', ['res', 'data', 'format'], cfg)),
+                  flip(includes)(pathOr([], ['res', 'data', 'format'], cfg)),
                   prop('value')
                 )
               )(answerFormatOptions)}
