@@ -49,7 +49,7 @@ import {
 import { ColumnDetail } from '../../interfaces';
 import questions from '../../utils/questions';
 import translations from '../../utils/translations';
-import { getQuestionCategoryFromTableName } from '../../utils/common';
+import { getQuestionCategoryFromTableName, preventNullOptions } from '../../utils/common';
 
 const defaultValueOptions = [
   {
@@ -122,8 +122,6 @@ const Form = ({
 
   const isNewRecord = propOr(true, '_new', record);
 
-  const preventNullOptions = (fn) => ifElse(isNil, always([]), compose(apply(fn), of));
-
   const options = preventNullOptions(
     compose(
       values,
@@ -139,7 +137,7 @@ const Form = ({
       flip(prop)(questions),
       getQuestionCategoryFromTableName
     )
-  )(table);
+  , table);
 
   const answerFormatOptions = preventNullOptions(
     compose(
@@ -153,7 +151,7 @@ const Form = ({
         })
       )
     )
-  )(answerFormats);
+  , answerFormats);
 
   return (
     <Modal show={!isNil(record)} onClose={loading ? undefined : close}>

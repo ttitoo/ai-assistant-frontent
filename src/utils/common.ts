@@ -18,20 +18,24 @@ import {
   nthArg,
   juxt,
   join,
-  filter,
-  includes,
   toString,
   identity,
   map,
-  has
+  has,
+  of,
+  apply,
+  uncurryN
 } from 'ramda';
-import { tapLog } from './log';
 import questions from './questions';
 import { Option } from '../interfaces';
 
 const isBlank = anyPass([isNil, isEmpty]);
 
 const getQuestionCategoryFromTableName = compose(head<string>, split('_'));
+
+const preventNullOptions = uncurryN<Option[]>(2, (fn: (vals: any[]) => any) =>
+  ifElse(isNil, always([]), compose(apply(fn), of))
+);
 
 const toQuestionOptions = ifElse(
   isNil,
@@ -78,5 +82,6 @@ export {
   getQuestionCategoryFromTableName,
   toQuestionOptions,
   toPercentage,
-  arrayToOptions
+  arrayToOptions,
+  preventNullOptions
 };
