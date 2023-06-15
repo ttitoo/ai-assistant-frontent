@@ -40,7 +40,7 @@ function* cacheProxy(namespace: string, fn, action, cacheSelectorPathFn: (action
     cached = {}
     const state = yield select(prop(namespace));
     mapObjIndexed((selector: string[], key: string) => {
-      cached[key] = compose(flip(path)(state), tapLog('aaa'), remove(0, 1))(selector);
+      cached[key] = compose(flip(path)(state), remove(0, 1))(selector);
     }, selectors);
   }
   log('path')(cacheSelectorPathFn(action))

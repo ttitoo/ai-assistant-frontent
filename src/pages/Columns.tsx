@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import classNames from 'classnames';
 import {
   addIndex,
@@ -20,7 +21,10 @@ import {
   unless,
   any,
   ifElse,
-  pathOr
+  join,
+  is,
+  find,
+  propEq
 } from 'ramda';
 import { useSelector } from 'react-redux';
 import AddIcon from '@mui/icons-material/Add';
@@ -31,13 +35,14 @@ import Table from '../components/Columns/Table';
 import Form from '../components/Columns/Form';
 import Detail from '../components/Columns/Detail';
 import SampleForm from '../components/Columns/SampleForm';
-import { ColumnDetail } from '../interfaces';
+import { ColumnDetail, SampleBatch } from '../interfaces';
 // import styles from "./page.module.css";
 import FloatingMenu from '../components/FloatingMenu';
 import styled from 'styled-components';
 import { isBlank } from '../utils/common';
 import useSagaDispatch from '../hooks/useSagaDispatch';
 import { ColumnsState } from '../store/reducers/columns';
+import { log, tapLog } from '../utils/log';
 
 const FitContentContainer = styled.div`
   height: fit-content;
@@ -48,9 +53,15 @@ const IconContainer = styled.div`
     font-size: 120px;
     color: #424242;
   }
-`
+`;
 
 const Columns = () => {
+  const {
+    table: previouSelectedTable,
+    column: previousSelectedColumn,
+    uid: previousSelectedColumnUid,
+    batch_uid: previousSampleBatchUid
+  } = useParams();
   const { dispatch, state } = useSagaDispatch<ColumnsState>('columns');
   const meta = useSelector(path(['app', 'meta']));
   const tables = useSelector(path(['app', 'tables']));
@@ -58,33 +69,98 @@ const Columns = () => {
     loading,
     submitting,
     success,
-    columnDetails: records,
-    table: lastSelectedTable,
-    column: lastSelectedColumn,
-    selected
+    sampleBatches,
+    columnDetails: records
   } = state;
-  const { columnDetail: columnDetailUid } = selected;
   const [editing, setEditing] = useState<ColumnDetail | undefined>(undefined);
   const [sampleFormVisible, setSampleFormVisible] = useState<
     string | undefined
   >(undefined);
   const [selectedTable, setSelectedTable] = useState<string | undefined>(
-    lastSelectedTable
+    previouSelectedTable
   );
   const [selectedColumn, setSelectedColumn] = useState<string | undefined>(
-    lastSelectedColumn
+    previousSelectedColumn
   );
+  const [selectedColumnDetailUid, setSelectedColumnDetailUid] = useState<
+    string | undefined
+  >(previousSelectedColumnUid);
+  const [selectedSampleBatch, setSelectedSampleBatch] = useState<
+    SampleBatch | string | undefined
+  >(previousSampleBatchUid);
+
+  log('previousSampleBatchUid', previousSampleBatchUid);
+
+  const showDetail = (uid: string) => {
+    dispatch('listSampleBatches', {
+      uid,
+      toggleLoading: false
+    });
+    history.pushState(
+      undefined,
+      '',
+      `/columns/${selectedTable}/${selectedColumn}/${uid}`
+    );
+    setSelectedColumnDetailUid(uid);
+  };
+
+  const showSampleBatch = (sampleBatch: SampleBatch) => {
+    history.pushState(
+      undefined,
+      '',
+      `${selectedColumnDetailUid}/batches/${sampleBatch.uid}/diff`
+    );
+    setSelectedSampleBatch(sampleBatch);
+    dispatch('diff', { uid: sampleBatch.uid });
+  };
+
+  const redirect = (forceToColumns: boolean = false) => {
+    if (forceToColumns || isNil(selectedColumnDetailUid)) {
+      const urlParts = ['/columns'];
+      const appendUrl = unless(isNil, (a) => urlParts.push(a));
+      appendUrl(selectedTable);
+      appendUrl(selectedColumn);
+      forceToColumns || appendUrl(selectedColumnDetailUid);
+      log('url', join('/', urlParts));
+      history.pushState(undefined, '', join('/', urlParts));
+    } else {
+      showDetail(selectedColumnDetailUid);
+    }
+  };
+
+  const clearSelectedSampleBatch = () => {
+    setSelectedSampleBatch(undefined);
+    redirect(true);
+  };
+
+  const clearSelectedColumnDetail = () => {
+    setSelectedColumnDetailUid(undefined);
+    redirect(true);
+  };
 
   useEffect(() => {
-    unless(isEmpty, compose(setSelectedTable, head, keys))(tables);
+    if (isNil(previouSelectedTable)) {
+      unless(isEmpty, compose(setSelectedTable, head, keys))(tables);
+    }
   }, [tables]);
 
   useEffect(() => {
     if (!isNil(selectedTable) && !isNil(selectedColumn)) {
-      dispatch('clearSelected');
+      clearSelectedColumnDetail();
       dispatch('list', { table: selectedTable, column: selectedColumn });
     }
+    redirect();
   }, [selectedTable, selectedColumn]);
+
+  useEffect(() => {
+    if (is(String, selectedSampleBatch)) {
+      // console.info('========================', ifElse(isNil, always(0), length)(sampleBatches))
+      compose(
+        unless(isNil, showSampleBatch),
+        find(propEq('uid', selectedSampleBatch))
+      )(sampleBatches);
+    }
+  }, [compose(prop('columnDetailUid'), head)(sampleBatches)]);
 
   useEffect(() => {
     if (!submitting) {
@@ -104,6 +180,7 @@ const Columns = () => {
   const changeColumn = (e: MouseEvent) => {
     e.preventDefault();
 
+    clearSelectedColumnDetail();
     compose(setSelectedColumn, path(['target', 'dataset', 'column']))(e);
   };
 
@@ -143,12 +220,16 @@ const Columns = () => {
     e.preventDefault();
     compose(
       setEditing,
-      mergeLeft<ColumnDetail>({ uid: new Date().getTime(), _new: false } as ColumnDetail)
+      mergeLeft<ColumnDetail>({
+        uid: new Date().getTime(),
+        _new: false
+      } as ColumnDetail)
     )(record);
   };
 
   const changeTable = (e: MouseEvent<HTMLAnchorElement>, tableName: string) => {
     e.preventDefault();
+    history.pushState(undefined, '', `/columns/${selectedTable}`);
     setSelectedTable(tableName);
     setSelectedColumn(undefined);
   };
@@ -220,9 +301,7 @@ const Columns = () => {
                       <IconContainer>
                         <AnnouncementIcon fontSize="inherit" />
                       </IconContainer>
-                      <p className="text-xl">
-                        请选择左侧特征
-                      </p>
+                      <p className="text-xl">请选择左侧特征</p>
                     </div>
                   ) : (
                     <div className="flow-root overflow-auto shadow-md sm:rounded-lg">
@@ -233,6 +312,7 @@ const Columns = () => {
                         payloads={records}
                         addFrom={addFrom}
                         showSampleForm={showSampleForm}
+                        showDetail={showDetail}
                       />
                       <div
                         className={classNames('my-10', {
@@ -246,13 +326,18 @@ const Columns = () => {
                 () => (
                   <Detail
                     key="detail"
-                    loading={loading}
+                    loading={loading || is(String, selectedSampleBatch)}
                     table={selectedTable}
                     column={selectedColumn}
+                    columnDetailUid={selectedColumnDetailUid}
+                    sampleBatch={selectedSampleBatch}
+                    showSampleBatch={showSampleBatch}
                     tables={tables}
+                    clearSelectedColumnDetail={clearSelectedColumnDetail}
+                    clearSelectedSampleBatch={clearSelectedSampleBatch}
                   />
                 )
-              )(columnDetailUid)}
+              )(selectedColumnDetailUid)}
             </Loadable>
           </div>
         </div>
@@ -277,7 +362,7 @@ const Columns = () => {
         close={closeSampleForm}
       />
       {any(isNil, [selectedTable, selectedColumn]) ||
-        !isNil(columnDetailUid) || (
+        !isNil(selectedColumnDetailUid) || (
           <FloatingMenu handleClick={add} icon={AddIcon} />
         )}
     </div>

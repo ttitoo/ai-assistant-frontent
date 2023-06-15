@@ -25,7 +25,6 @@ import styled from 'styled-components';
 import FooterStats from '../components/Samples/FooterStats';
 import useSagaDispatch from '../hooks/useSagaDispatch';
 import { SamplesState } from '../store/reducers/samples';
-import { log } from '../utils/log';
 
 const EntriesContainer = styled.div`
   padding-bottom: 115px;

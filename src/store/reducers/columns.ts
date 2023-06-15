@@ -83,9 +83,14 @@ export default createSlice({
       state.columnSamples = payloads;
       state.cache.columnSamples[`${table}-${column}`] = payloads;
     },
+    listSampleBatchesStart: (state, action) => {
+      const { uid, } = action.payload;
+      state.loading = true;
+      state.selected.columnDetail = uid;
+    },
     listSampleBatchesSuccess: (state, action) => {
       const { uid, payloads, } = action.payload;
-      state.selected.columnDetail = action.payload.uid;
+      state.loading = false;
       state.sampleBatches = payloads;
       state.cache.sampleBatches[uid] = payloads;
     },

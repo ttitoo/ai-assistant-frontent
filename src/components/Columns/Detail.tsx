@@ -76,26 +76,17 @@ const IconContainer = styled.div`
   }
 `;
 
-export default ({ loading, table, column, tables, close }) => {
+export default ({ loading, table, column, columnDetailUid, sampleBatch, showSampleBatch, tables, close, clearSelectedColumnDetail, clearSelectedSampleBatch, }) => {
   const { dispatch, state } = useSagaDispatch<ColumnsState>('columns');
-  const { diffing, sampleBatches, columnSampleEntries, selected, cache } =
+  const { diffing, sampleBatches, columnSampleEntries, cache } =
     state;
-  const { columnDetail: uid } = selected;
+  // const { columnDetailUid } = selected;
   const find_by_uid = (val: string) => find(propEq('uid', val));
   const record = compose(
-    find_by_uid(uid),
+    find_by_uid(columnDetailUid),
     pathOr([], ['columnDetails', `${table}-${column}`])
   )(cache);
-  const [selectedSampleBatch, setSelectedSampleBatch] = useState<
-    SampleBatch | undefined
-  >(undefined);
   const [showFullCapacityForm, setShowFullCapacityForm] = useState<boolean>(false);
-  
-  log('sampleBatches', sampleBatches)
-
-  const clearSelectedColumnDetail = () => {
-    dispatch('setSelected', { key: 'columnDetail', value: undefined });
-  };
 
   // return a function to invoke saga action
   // if the parameter is String, then make it a object with key 'uid', otherwise use the parameter as the input
@@ -113,10 +104,6 @@ export default ({ loading, table, column, tables, close }) => {
       )
     );
 
-  useEffect(() => {
-    unless(isNil, invokeAction('diff'))(selectedSampleBatch);
-  }, [isNil(selectedSampleBatch)]);
-
   if (loading) {
     // prevent content when loading
     return <div />;
@@ -124,7 +111,7 @@ export default ({ loading, table, column, tables, close }) => {
 
   const requestFullCapacity = compose(
     invokeAction('requestFullCapacity'),
-    mergeRight({ uid, }),
+    mergeRight({ uid: columnDetailUid, }),
   );
   const getUsedModels = compose(uniq, pluck('model'));
   const startFullCapacity = (e: MouseEvent) => {
@@ -152,7 +139,7 @@ export default ({ loading, table, column, tables, close }) => {
     <ColumnSampleTable
       mode={Mode.Normal}
       sampleBatches={sampleBatches}
-      showSampleBatch={setSelectedSampleBatch}
+      showSampleBatch={showSampleBatch}
       dispatchAction={invokeAction}
     />
   );
@@ -313,7 +300,7 @@ export default ({ loading, table, column, tables, close }) => {
       </Card>
 
       <div className="mt-10">
-        {ifElse(isNil, renderTable, renderSampleBatch)(selectedSampleBatch)}
+        {ifElse(isNil, renderTable, renderSampleBatch)(sampleBatch)}
       </div>
 
       {
@@ -328,12 +315,12 @@ export default ({ loading, table, column, tables, close }) => {
 
       <FloatingMenu
         handleClick={
-          isNil(selectedSampleBatch)
+          isNil(sampleBatch)
             ? clearSelectedColumnDetail
-            : () => setSelectedSampleBatch(undefined)
+            : clearSelectedSampleBatch
         }
         icon={
-          isNil(selectedSampleBatch)
+          isNil(sampleBatch)
             ? KeyboardArrowLeftIcon
             : KeyboardDoubleArrowLeftIcon
         }

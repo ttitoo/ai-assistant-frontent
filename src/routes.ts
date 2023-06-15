@@ -32,6 +32,34 @@ export const routes: Array<IRoute> = [
       component: Columns
   },
   {
+      key: 'tables',
+      title: 'Columns',
+      path: '/columns/:table',
+      enabled: true,
+      component: Columns
+  },
+  {
+      key: 'table_columns',
+      title: 'Columns',
+      path: '/columns/:table/:column',
+      enabled: true,
+      component: Columns
+  },
+  {
+      key: 'column_details',
+      title: 'Columns',
+      path: '/columns/:table/:column/:uid',
+      enabled: true,
+      component: Columns
+  },
+  {
+      key: 'sample_batch_diff',
+      title: 'Columns',
+      path: '/columns/:table/:column/:uid/batches/:batch_uid/diff',
+      enabled: true,
+      component: Columns
+  },
+  {
     key: 'samples',
     title: 'Samples',
     path: '/samples',

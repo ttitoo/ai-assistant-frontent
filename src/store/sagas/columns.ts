@@ -54,7 +54,8 @@ function* run(action) {
 }
 
 function* listSampleBatches(action) {
-  const { uid, full_capacity } = action.payload;
+  const { uid, } = action.payload;
+  yield put({ type: 'columns/listSampleBatchesStart', payload: { uid, } });
   const payloads = raiseErrorOnCondition(yield call(api.listSampleBatches, uid));
   yield put({ type: 'columns/listSampleBatchesSuccess', payload: { uid, payloads, } });
 }

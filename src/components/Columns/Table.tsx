@@ -36,6 +36,7 @@ import { getQuestionCategoryFromTableName } from '../../utils/common';
 import styled from 'styled-components';
 import useSagaDispatch from '../../hooks/useSagaDispatch';
 import { ColumnsState } from '../../store/reducers/columns';
+import { log } from '../../utils/log';
 
 interface TableProps {
   table: string;
@@ -43,7 +44,7 @@ interface TableProps {
   payloads: ColumnDetail[];
   addFrom: (record: ColumnDetail) => void;
   showSampleForm: (e: MouseEvent, uid: string) => void;
-  showDetail: (record: ColumnDetail) => void;
+  showDetail: (uid: string) => void;
 }
 
 const PromptContainer = styled.div`
@@ -74,8 +75,7 @@ const Table = ({
   const showColumnDetail = (e: MouseEvent, columnDetail: ColumnDetail) => {
     e.preventDefault();
 
-    const { uid } = columnDetail;
-    dispatch('listSampleBatches', { uid, toggleLoading: false });
+    showDetail(columnDetail.uid);
   };
 
   const setActiveButton = (uid: string) => (

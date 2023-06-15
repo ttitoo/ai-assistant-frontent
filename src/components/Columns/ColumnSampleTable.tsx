@@ -1,13 +1,9 @@
 import { Alert, Tooltip, Table } from 'flowbite-react';
 import {
   always,
-  any,
-  not,
   compose,
   flip,
   ifElse,
-  isNil,
-  juxt,
   map,
   path,
   prop,
@@ -18,7 +14,6 @@ import {
   curry,
   __,
   when,
-  unless
 } from 'ramda';
 import dayjs from 'dayjs';
 import { SampleBatch } from '../../interfaces';
