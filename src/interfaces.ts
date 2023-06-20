@@ -91,6 +91,11 @@ interface SampleBatch {
     precision: number
     recall: number
   }
+  history_statistics: {
+    failure: number
+    retrying: number
+    finished: number
+  }
   createdAt: number
   updatedAt: number
 }
