@@ -2,39 +2,17 @@ import {
   all,
   call,
   put,
-  select,
-  delay,
-  takeEvery,
   takeLatest
 } from 'redux-saga/effects';
 import {
-  always,
-  apply,
-  compose,
-  curry,
   curryN,
-  equals,
   gt,
-  identity,
-  ifElse,
-  isNil,
-  juxt,
   map,
-  mergeRight,
-  not,
-  objOf,
-  path,
-  pathOr,
-  prop,
-  unless,
   __
 } from 'ramda';
 import api from '../../api/samples';
 import { raiseErrorOnCondition, proxied, cacheProxied } from './common';
-import { log } from '../../utils/log';
 import { toast } from 'react-toastify';
-import { snakeCase } from 'change-case';
-import { isBlank } from '../../utils/common';
 
 const prefix: string = 'samples';
 
